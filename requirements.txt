@@ -1,8 +1,8 @@
 # generated from manifests external_dependencies
-fastapi
-python-multipart
-ujson
 a2wsgi
-parse-accept-language
+fastapi
 graphene
 graphql_server
+parse-accept-language
+python-multipart
+ujson
