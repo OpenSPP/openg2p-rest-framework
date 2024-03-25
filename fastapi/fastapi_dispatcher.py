@@ -4,6 +4,8 @@
 from contextlib import contextmanager
 from io import BytesIO
 
+import werkzeug.wrappers
+
 from odoo.http import Dispatcher, request
 
 from .context import odoo_env_ctx
@@ -20,12 +22,12 @@ class FastApiDispatcher(Dispatcher):
         # don't parse the httprequest let starlette parse the stream
         self.request.params = {}  # dict(self.request.get_http_params(), **args)
         environ = self._get_environ()
-        root_path = "/" + environ["PATH_INFO"].split("/")[1]
+        full_path = environ["PATH_INFO"]
         # TODO store the env into contextvar to be used by the odoo_env
         # depends method
         fastapi_endpoint = self.request.env["fastapi.endpoint"].sudo()
-        app = fastapi_endpoint.get_app(root_path)
-        uid = fastapi_endpoint.get_uid(root_path)
+        app = fastapi_endpoint.get_app(full_path)
+        uid = fastapi_endpoint.get_uid(full_path)
         data = BytesIO()
         with self._manage_odoo_env(uid):
             for r in app(environ, self._make_response):
@@ -43,7 +45,15 @@ class FastApiDispatcher(Dispatcher):
 
     def _get_environ(self):
         environ = self.request.httprequest.environ
-        environ["wsgi.input"] = self.request.httprequest._get_stream_for_parsing()
+        try:
+            # _get_stream_for_parsing is not supported by odoo HttpRequest.
+            # Hence switching to werkzeug Request. TODO: Change this.
+            httprequest = werkzeug.wrappers.Request(environ)
+            environ["wsgi.input"] = httprequest._get_stream_for_parsing()
+        except Exception:
+            # This is done to silence exception when "wsgi.input" is not set in environ
+            # TODO: remove this.
+            environ["wsgi.input"] = BytesIO()
         return environ
 
     @contextmanager

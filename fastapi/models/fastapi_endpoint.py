@@ -190,13 +190,15 @@ class FastapiEndpoint(models.Model):
         self.env.registry.clear_cache()
 
     @api.model
-    @tools.ormcache("root_path")
+    @tools.ormcache("full_path")
     # TODO cache on thread local by db to enable to get 1 middelware by
     # thread when odoo runs in multi threads mode and to allows invalidate
     # specific entries in place og the overall cache as we have to do into
     # the _rest_app method
-    def get_app(self, root_path):
-        record = self.search([("root_path", "=", root_path)])
+    def get_app(self, full_path):
+        record = next(
+            rec for rec in self.search([]) if full_path.startswith(rec.root_path)
+        )
         if not record:
             return None
         app = FastAPI()
@@ -204,9 +206,11 @@ class FastapiEndpoint(models.Model):
         return ASGIMiddleware(app)
 
     @api.model
-    @tools.ormcache("root_path")
-    def get_uid(self, root_path):
-        record = self.search([("root_path", "=", root_path)])
+    @tools.ormcache("full_path")
+    def get_uid(self, full_path):
+        record = next(
+            rec for rec in self.search([]) if full_path.startswith(rec.root_path)
+        )
         if not record:
             return None
         return record.user_id.id
