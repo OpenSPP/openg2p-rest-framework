@@ -4,8 +4,6 @@
 from contextlib import contextmanager
 from io import BytesIO
 
-import werkzeug.wrappers
-
 from odoo.http import Dispatcher, request
 
 from .context import odoo_env_ctx
@@ -44,17 +42,7 @@ class FastApiDispatcher(Dispatcher):
         self.headers = dict(headers_tuple)
 
     def _get_environ(self):
-        environ = self.request.httprequest.environ
-        try:
-            # _get_stream_for_parsing is not supported by odoo HttpRequest.
-            # Hence switching to werkzeug Request. TODO: Change this.
-            httprequest = werkzeug.wrappers.Request(environ)
-            environ["wsgi.input"] = httprequest._get_stream_for_parsing()
-        except Exception:
-            # This is done to silence exception when "wsgi.input" is not set in environ
-            # TODO: remove this.
-            environ["wsgi.input"] = BytesIO()
-        return environ
+        return self.request.httprequest._HTTPRequest__environ.copy()
 
     @contextmanager
     def _manage_odoo_env(self, uid=None):
