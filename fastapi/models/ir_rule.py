@@ -21,6 +21,8 @@ class IrRule(models.Model):
             ctx["authenticated_partner_id"] = self.env.context[
                 "authenticated_partner_id"
             ]
+        else:
+            ctx["authenticated_partner_id"] = self.env.user.partner_id.id
         return ctx
 
     def _compute_domain_keys(self):
